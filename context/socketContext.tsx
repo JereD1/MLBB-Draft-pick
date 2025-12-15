@@ -1,3 +1,7 @@
+// ============================================================================
+// UPDATED SocketContext with Environment Variable Support
+// FILE: context/SocketContext.tsx
+// ============================================================================
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -18,24 +22,37 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Initialize socket connection
-    const socketInstance = io('http://localhost:3000', {
+    // Use environment variable if available, fallback to localhost
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000';
+    
+    console.log('🔌 Connecting to Socket.IO server:', socketUrl);
+
+    const socketInstance = io(socketUrl, {
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
     });
 
     socketInstance.on('connect', () => {
       console.log('✅ Socket connected:', socketInstance.id);
+      console.log('📡 Connected to:', socketUrl);
       setIsConnected(true);
     });
 
-    socketInstance.on('disconnect', () => {
-      console.log('❌ Socket disconnected');
+    socketInstance.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason);
       setIsConnected(false);
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('🔴 Socket connection error:', error.message);
       setIsConnected(false);
+    });
+
+    socketInstance.on('reconnect', (attemptNumber) => {
+      console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+      setIsConnected(true);
     });
 
     setSocket(socketInstance);

@@ -1,18 +1,12 @@
-// ============================================================================
-// FIXED server.js - Compatible with Next.js 15
-// FILE: server.js (REPLACE ENTIRE FILE)
-// ============================================================================
-
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = 3000;
+const hostname = '0.0.0.0'; // ⭐ IMPORTANT: Use 0.0.0.0 for Railway
+const port = parseInt(process.env.PORT || '3000', 10); // ⭐ Use Railway's PORT
 
-// Initialize Next.js
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
@@ -22,7 +16,7 @@ app.prepare().then(() => {
   const expressApp = express();
   const server = createServer(expressApp);
   
-  // Initialize Socket.IO
+  // ⭐ IMPORTANT: Allow all origins for CORS
   const io = new Server(server, {
     cors: {
       origin: '*',
@@ -33,12 +27,10 @@ app.prepare().then(() => {
   let currentState = null;
   let connectedClients = 0;
 
-  // Socket.IO connection handling
   io.on('connection', (socket) => {
     connectedClients++;
-    console.log(`✅ Client connected: ${socket.id} | Total clients: ${connectedClients}`);
+    console.log(`✅ Client connected: ${socket.id} | Total: ${connectedClients}`);
 
-    // Send current state to new client
     socket.on('request-state', (callback) => {
       if (currentState) {
         console.log(`📤 Sending state to ${socket.id}`);
@@ -48,24 +40,21 @@ app.prepare().then(() => {
       }
     });
 
-    // Handle draft updates
     socket.on('draft:update', (state) => {
       console.log(`📡 Draft update from ${socket.id}`);
       currentState = state;
       socket.broadcast.emit('draft:update', state);
     });
 
-    // Handle draft reset
     socket.on('draft:reset', () => {
       console.log('🔄 Draft reset');
       currentState = null;
       io.emit('draft:reset');
     });
 
-    // Handle disconnect
     socket.on('disconnect', () => {
       connectedClients--;
-      console.log(`❌ Client disconnected: ${socket.id} | Total clients: ${connectedClients}`);
+      console.log(`❌ Client disconnected: ${socket.id} | Total: ${connectedClients}`);
     });
   });
 
@@ -78,7 +67,7 @@ app.prepare().then(() => {
     });
   });
 
-  // Handle all Next.js routes - FIXED for Next.js 15
+  // Handle all Next.js routes
   expressApp.use((req, res) => {
     return handler(req, res);
   });
@@ -95,7 +84,4 @@ app.prepare().then(() => {
 ╚═══════════════════════════════════════╝
     `);
   });
-}).catch((err) => {
-  console.error('❌ Error starting server:', err);
-  process.exit(1);
 });
