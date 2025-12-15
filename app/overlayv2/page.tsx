@@ -54,6 +54,8 @@ export default function TournamentOverlay() {
             {[1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div key={`left-${i}`} className="flex-1 opacity-30">
                 <Image
+                  width={100}
+                  height={100}
                   src={`https://via.placeholder.com/100x80?text=Hero${i}`}
                   className="w-full h-full object-cover grayscale"
                   alt=""
@@ -66,6 +68,8 @@ export default function TournamentOverlay() {
             {[8, 9, 10, 11, 12, 13, 14].map((i) => (
               <div key={`right-${i}`} className="flex-1 opacity-30">
                 <Image
+                height={100}
+                  width={100}
                   src={`https://via.placeholder.com/100x80?text=Hero${i}`}
                   className="w-full h-full object-cover grayscale"
                   alt=""
@@ -97,6 +101,8 @@ export default function TournamentOverlay() {
                 {draft.hero ? (
                   <div className="w-full h-full overflow-hidden bg-black">
                     <Image
+                      width={100}
+                      height={100}
                       src={draft.hero.image}
                       alt={draft.hero.name}
                       className="w-full h-full object-cover"
@@ -146,6 +152,8 @@ export default function TournamentOverlay() {
                     <>
                       <div className="w-full h-full overflow-hidden">
                         <Image
+                          width={100}
+                          height={100}
                           src={draft.hero.image}
                           alt={draft.hero.name}
                           className="w-full h-full object-cover opacity-50 grayscale"
@@ -270,6 +278,8 @@ export default function TournamentOverlay() {
                 {draft.hero ? (
                   <div className="w-full h-full overflow-hidden bg-black/0 ">
                     <Image
+                      width={100}
+                      height={100}
                       src={draft.hero.image}
                       alt={draft.hero.name}
                       className="w-full h-full object-cover"
@@ -307,6 +317,8 @@ export default function TournamentOverlay() {
                     <>
                       <div className="w-full h-full overflow-hidden">
                         <Image
+                          width={100}
+                          height={100}
                           src={draft.hero.image}
                           alt={draft.hero.name}
                           className="w-full h-full object-cover opacity-50 grayscale"

@@ -4,8 +4,9 @@ const { Server } = require('socket.io');
 const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = '0.0.0.0'; // ⭐ IMPORTANT: Use 0.0.0.0 for Railway
-const port = parseInt(process.env.PORT || '3000', 10); // ⭐ Use Railway's PORT
+const isProduction = process.env.NEXT_PUBLIC_SOCKET_URL && process.env.NEXT_PUBLIC_SOCKET_URL.includes('railway.app');
+const hostname = isProduction ? '0.0.0.0' : 'localhost';
+const port = parseInt(process.env.PORT || '3000', 10);
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -16,11 +17,11 @@ app.prepare().then(() => {
   const expressApp = express();
   const server = createServer(expressApp);
   
-  // ⭐ IMPORTANT: Allow all origins for CORS
   const io = new Server(server, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
+      origin: isProduction ? '*' : ['http://localhost:3000', 'http://localhost:3001'],
+      methods: ['GET', 'POST'],
+      credentials: true
     }
   });
 
@@ -58,29 +59,31 @@ app.prepare().then(() => {
     });
   });
 
-  // Test endpoint
   expressApp.get('/api/socket-test', (req, res) => {
     res.json({ 
       socketIO: 'working',
       clients: connectedClients,
+      environment: isProduction ? 'production' : 'local',
+      socketUrl: process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000',
       timestamp: new Date().toISOString()
     });
   });
 
-  // Handle all Next.js routes
   expressApp.use((req, res) => {
     return handler(req, res);
   });
 
-  server.listen(port, (err) => {
+  server.listen(port, hostname, (err) => {
     if (err) throw err;
     console.log(`
 ╔═══════════════════════════════════════╗
 ║   🚀 Server Started Successfully!    ║
 ╟───────────────────────────────────────╢
-║   URL: http://${hostname}:${port}        ║
+║   Local: http://${hostname}:${port}
+║   Socket URL: ${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'}
 ║   Socket.IO: ✅ Ready                 ║
-║   Environment: ${dev ? 'Development' : 'Production'}         ║
+║   Environment: ${isProduction ? 'Production' : 'Development'}         ║
+║   Clients: ${connectedClients}                     ║
 ╚═══════════════════════════════════════╝
     `);
   });

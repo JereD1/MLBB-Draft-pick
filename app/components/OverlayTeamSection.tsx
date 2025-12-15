@@ -59,6 +59,8 @@ export default function OverlayTeamSection({
               {draft.hero ? (
                 <>
                   <Image
+                  width={100}
+                  height={100}
                     src={draft.hero.image} 
                     alt={draft.hero.name} 
                     className="w-full h-full object-cover opacity-50"
@@ -98,6 +100,8 @@ export default function OverlayTeamSection({
               } rounded-lg overflow-hidden`}>
                 {draft.hero ? (
                   <Image
+                  height={100}
+                  width={100}
                     src={draft.hero.image} 
                     alt={draft.hero.name} 
                     className="w-full h-full object-cover"
