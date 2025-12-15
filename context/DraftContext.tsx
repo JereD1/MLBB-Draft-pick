@@ -1,112 +1,170 @@
+// ============================================================================
+// Draft Context Provider with Pusher Integration
+// FILE: context/DraftContext.tsx
+// ============================================================================
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { DraftState } from '@/types';
-import { useSocket } from './socketContext';
+import { usePusher } from './PusherContext';
 
 interface DraftContextType {
   state: DraftState;
   setState: React.Dispatch<React.SetStateAction<DraftState>>;
   updateState: (newState: DraftState | ((prev: DraftState) => DraftState)) => void;
+  resetDraft: () => void;
 }
 
 const DraftContext = createContext<DraftContextType | undefined>(undefined);
 
+const initialState: DraftState = {
+  currentStep: 0,
+  selections: {},
+  teamNames: { blue: 'Team Blue', red: 'Team Red' },
+  timeLeft: 30,
+  isTimerRunning: false,
+};
+
 export function DraftProvider({ children }: { children: ReactNode }) {
-  const { socket, isConnected } = useSocket();
+  const { isConnected, subscribe, unsubscribe, broadcast } = usePusher();
   const [state, setState] = useState<DraftState>(() => {
+    // Load from localStorage on initial mount
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('draftState');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          console.log('📦 Loaded state from localStorage');
+          return parsed;
         } catch (e) {
-          console.error('Failed to parse saved state');
+          console.error('❌ Failed to parse saved state:', e);
         }
       }
     }
-    
-    return {
-      currentStep: 0,
-      selections: {},
-      teamNames: { blue: 'Team Blue', red: 'Team Red' },
-      timeLeft: 30,
-      isTimerRunning: false,
-    };
+    return initialState;
   });
 
-  // Track if update is from socket to prevent loop
-  const isSocketUpdate = useRef(false);
+  // Track if update is from Pusher to prevent infinite loops
+  const isPusherUpdate = useRef(false);
+  const hasRequestedState = useRef(false);
 
-  // Request current state when socket connects
+  // Request current state from server when connected (only once)
   useEffect(() => {
-    if (socket && isConnected) {
-      socket.emit('request-state', (serverState: DraftState) => {
-        if (serverState) {
-          console.log('📥 Received state from server');
-          isSocketUpdate.current = true;
-          setState(serverState);
-        }
-      });
+    if (isConnected && !hasRequestedState.current) {
+      console.log('📥 Requesting current state from server...');
+      hasRequestedState.current = true;
+      
+      // Request state via API
+      fetch('/api/pusher/get-state')
+        .then(res => res.json())
+        .then(data => {
+          if (data.state) {
+            console.log('📥 Received state from server:', data.state);
+            isPusherUpdate.current = true;
+            setState(data.state);
+          } else {
+            console.log('📭 No state available on server');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Failed to fetch state:', err);
+        });
     }
-  }, [socket, isConnected]);
+  }, [isConnected]);
 
-  // Listen for draft updates from other clients
+  // Listen for draft updates from other clients via Pusher
   useEffect(() => {
-    if (!socket) return;
+    if (!isConnected) {
+      console.log('⚠️ Not connected to Pusher, skipping event subscription');
+      return;
+    }
 
-    const handleDraftUpdate = (newState: DraftState) => {
-      console.log('📡 Received draft update from server');
-      isSocketUpdate.current = true;
-      setState(newState);
+    console.log('👂 Setting up Pusher event listeners...');
+
+    const handleDraftUpdate = (data: { state: DraftState }) => {
+      console.log('📡 Received draft update from Pusher:', data);
+      isPusherUpdate.current = true;
+      setState(data.state);
     };
 
     const handleDraftReset = () => {
-      console.log('🔄 Received draft reset from server');
-      isSocketUpdate.current = true;
-      setState({
-        currentStep: 0,
-        selections: {},
-        teamNames: { blue: 'Team Blue', red: 'Team Red' },
-        timeLeft: 30,
-        isTimerRunning: false,
-      });
+      console.log('🔄 Received draft reset from Pusher');
+      isPusherUpdate.current = true;
+      setState(initialState);
+      
+      // Also clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('draftState');
+      }
     };
 
-    socket.on('draft:update', handleDraftUpdate);
-    socket.on('draft:reset', handleDraftReset);
+    // Subscribe to events
+    subscribe('draft:update', handleDraftUpdate);
+    subscribe('draft:reset', handleDraftReset);
 
     return () => {
-      socket.off('draft:update', handleDraftUpdate);
-      socket.off('draft:reset', handleDraftReset);
+      console.log('🧹 Cleaning up Pusher event listeners');
+      unsubscribe('draft:update', handleDraftUpdate);
+      unsubscribe('draft:reset', handleDraftReset);
     };
-  }, [socket]);
+  }, [isConnected, subscribe, unsubscribe]);
 
-  // Save to localStorage (but DON'T emit here)
+  // Save to localStorage whenever state changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('draftState', JSON.stringify(state));
+      try {
+        localStorage.setItem('draftState', JSON.stringify(state));
+        console.log('💾 Saved state to localStorage');
+      } catch (e) {
+        console.error('❌ Failed to save state to localStorage:', e);
+      }
     }
-    // Reset the flag after state update
-    isSocketUpdate.current = false;
+    
+    // Reset the Pusher update flag after state update
+    isPusherUpdate.current = false;
   }, [state]);
 
-  // New function to update state AND emit to socket
+  // Function to update state AND broadcast to other clients via Pusher
   const updateState = (newState: DraftState | ((prev: DraftState) => DraftState)) => {
     const resolvedState = typeof newState === 'function' ? newState(state) : newState;
+    
+    console.log('🔄 Updating state:', resolvedState);
     
     // Update local state
     setState(resolvedState);
     
-    // Only emit if this is NOT from a socket update (prevent loop)
-    if (!isSocketUpdate.current && socket && isConnected) {
-      console.log('📤 Emitting draft update to server');
-      socket.emit('draft:update', resolvedState);
+    // Only broadcast if this is NOT from a Pusher update (prevent infinite loop)
+    if (!isPusherUpdate.current && isConnected) {
+      console.log('📤 Broadcasting draft update to Pusher');
+      broadcast('draft:update', { state: resolvedState });
+    } else if (!isConnected) {
+      console.warn('⚠️ Not connected to Pusher, state change not broadcasted');
+    }
+  };
+
+  // Function to reset the entire draft
+  const resetDraft = () => {
+    console.log('🔄 Resetting draft to initial state');
+    
+    // Update local state
+    setState(initialState);
+    
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('draftState');
+    }
+    
+    // Broadcast reset to other clients
+    if (isConnected) {
+      console.log('📤 Broadcasting draft reset to Pusher');
+      broadcast('draft:reset', {});
+    } else {
+      console.warn('⚠️ Not connected to Pusher, reset not broadcasted');
     }
   };
 
   return (
-    <DraftContext.Provider value={{ state, setState, updateState }}>
+    <DraftContext.Provider value={{ state, setState, updateState, resetDraft }}>
       {children}
     </DraftContext.Provider>
   );

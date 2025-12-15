@@ -1,23 +1,27 @@
+// ============================================================================
+// useDraft Hook with Pusher Integration
+// FILE: hooks/useDraft.ts
+// ============================================================================
 'use client';
 
 import { useEffect, useCallback } from 'react';
 import { Hero, TeamData } from '@/types';
 import { DRAFT_PHASES } from '@/lib/DraftPhases';
 import { useDraftContext } from '@/context/DraftContext';
-import { useSocket } from '@/context/socketContext';
+import { usePusher } from '@/context/PusherContext';
 
 export function useDraft(heroes: Hero[]) {
-  const { state, setState, updateState } = useDraftContext();
-  const { socket } = useSocket();
+  const { state, setState, updateState, resetDraft: contextResetDraft } = useDraftContext();
+  const { isConnected, broadcast } = usePusher();
 
-  // Timer effect - Use setState (local only) to avoid emitting every second
+  // Timer effect - Use setState (local only) to avoid broadcasting every second
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (state.isTimerRunning && state.timeLeft > 0) {
       interval = setInterval(() => {
         // Use setState instead of updateState for timer
-        // This updates locally without emitting to socket every second
+        // This updates locally without broadcasting to Pusher every second
         setState(prev => ({
           ...prev,
           timeLeft: Math.max(0, prev.timeLeft - 1)
@@ -32,20 +36,22 @@ export function useDraft(heroes: Hero[]) {
     };
   }, [state.isTimerRunning, state.timeLeft, setState]);
 
-  // Sync timer to socket every 5 seconds instead of every second
+  // Sync timer to Pusher every 5 seconds instead of every second
   useEffect(() => {
-    if (!state.isTimerRunning) return;
+    if (!state.isTimerRunning || !isConnected) return;
 
     const syncInterval = setInterval(() => {
-      if (socket) {
-        socket.emit('draft:update', state);
-      }
+      console.log('⏱️ Syncing timer state to Pusher');
+      broadcast('draft:update', { state });
     }, 5000); // Sync every 5 seconds
 
     return () => clearInterval(syncInterval);
-  }, [state.isTimerRunning, socket, state]);
+  }, [state.isTimerRunning, isConnected, state, broadcast]);
 
+  // Select a hero and move to next step
   const selectHero = useCallback((heroId: number) => {
+    console.log('🎯 Selecting hero:', heroId);
+    
     updateState(prev => {
       const newSelections = { ...prev.selections, [prev.currentStep]: heroId };
       const newStep = prev.currentStep < DRAFT_PHASES.length - 1 
@@ -61,7 +67,10 @@ export function useDraft(heroes: Hero[]) {
     });
   }, [updateState]);
 
+  // Move to next step
   const nextStep = useCallback(() => {
+    console.log('➡️ Moving to next step');
+    
     updateState(prev => ({
       ...prev,
       currentStep: Math.min(prev.currentStep + 1, DRAFT_PHASES.length - 1),
@@ -69,7 +78,10 @@ export function useDraft(heroes: Hero[]) {
     }));
   }, [updateState]);
 
+  // Move to previous step
   const previousStep = useCallback(() => {
+    console.log('⬅️ Moving to previous step');
+    
     updateState(prev => ({
       ...prev,
       currentStep: Math.max(prev.currentStep - 1, 0),
@@ -77,43 +89,40 @@ export function useDraft(heroes: Hero[]) {
     }));
   }, [updateState]);
 
+  // Reset the entire draft
   const resetDraft = useCallback(() => {
-    const resetState = {
-      currentStep: 0,
-      selections: {},
-      teamNames: { blue: 'Team Blue', red: 'Team Red' },
-      timeLeft: 30,
-      isTimerRunning: false,
-    };
+    console.log('🔄 Resetting draft');
     
-    // Update local state
-    updateState(resetState);
-    
-    // Emit reset event separately
-    if (socket) {
-      console.log('🔄 Emitting draft reset');
-      socket.emit('draft:reset');
-    }
-  }, [updateState, socket]);
+    // Use the context's reset function which handles both local and broadcast
+    contextResetDraft();
+  }, [contextResetDraft]);
 
+  // Toggle timer on/off
   const toggleTimer = useCallback(() => {
+    console.log('⏯️ Toggling timer');
+    
     updateState(prev => ({
       ...prev,
       isTimerRunning: !prev.isTimerRunning,
     }));
   }, [updateState]);
 
+  // Set team name
   const setTeamName = useCallback((team: 'blue' | 'red', name: string) => {
+    console.log(`📝 Setting ${team} team name to:`, name);
+    
     updateState(prev => ({
       ...prev,
       teamNames: { ...prev.teamNames, [team]: name },
     }));
   }, [updateState]);
 
+  // Get hero by ID
   const getHeroById = useCallback((id: number): Hero | null => {
     return heroes.find(h => h.id === id) || null;
   }, [heroes]);
 
+  // Get team data with hero information
   const getTeamData = useCallback((team: 'blue' | 'red'): TeamData[] => {
     return DRAFT_PHASES.map((draft, idx) => ({
       ...draft,
@@ -136,5 +145,6 @@ export function useDraft(heroes: Hero[]) {
     setTeamName,
     getHeroById,
     getTeamData,
+    isConnected, // Expose connection status
   };
 }

@@ -89,7 +89,9 @@ export default function ControllerPage() {
     );
   }
 
-  const selectedIds = Object.values(state.selections);
+  // Fix: Filter out undefined values and ensure it's a number array
+  const selectedIds = Object.values(state.selections).filter((id): id is number => id !== undefined);
+  
   const blueTeam = getTeamData("blue");
   const redTeam = getTeamData("red");
 
