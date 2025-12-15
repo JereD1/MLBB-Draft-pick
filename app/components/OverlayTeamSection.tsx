@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, X } from 'lucide-react';
 import { TeamData } from '@/types';
+import Image from 'next/image';
 
 interface OverlayTeamSectionProps {
   team: 'blue' | 'red';
@@ -57,7 +58,7 @@ export default function OverlayTeamSection({
             >
               {draft.hero ? (
                 <>
-                  <img 
+                  <Image
                     src={draft.hero.image} 
                     alt={draft.hero.name} 
                     className="w-full h-full object-cover opacity-50"
@@ -96,7 +97,7 @@ export default function OverlayTeamSection({
                 team === 'blue' ? 'bg-blue-900/50' : 'bg-red-900/50'
               } rounded-lg overflow-hidden`}>
                 {draft.hero ? (
-                  <img 
+                  <Image
                     src={draft.hero.image} 
                     alt={draft.hero.name} 
                     className="w-full h-full object-cover"

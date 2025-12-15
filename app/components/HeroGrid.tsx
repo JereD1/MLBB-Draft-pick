@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Image from 'next/image';
 import { Hero } from '@/types';
 import { motion } from 'framer-motion';
 
@@ -39,14 +40,19 @@ export default function HeroGrid({ heroes, selectedHeroIds, onSelectHero }: Hero
          onClick={() => onSelectHero(hero.id)}
          className="bg-white/5 hover:bg-white/10 p-2 transition-all border border-white/10"
        >
-         <img 
-           src={hero.image} 
-           alt={hero.name}
-           className="w-full aspect-square object-cover mb-2"
-           onError={(e) => {
-             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=' + hero.name;
-           }}
-         />
+         <div className="relative w-full aspect-square mb-2">
+           <Image 
+             src={hero.image} 
+             alt={hero.name}
+             fill
+             className="object-cover"
+             sizes="(max-width: 768px) 20vw, 10vw"
+             onError={(e) => {
+               const target = e.target as HTMLImageElement;
+               target.src = `https://via.placeholder.com/100?text=${encodeURIComponent(hero.name)}`;
+             }}
+           />
+         </div>
          <div className="text-xs font-semibold truncate text-white">{hero.name}</div>
        </motion.button>
         ))}

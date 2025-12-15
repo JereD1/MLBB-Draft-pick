@@ -8,6 +8,7 @@ import { useDraft } from '@/hooks/useDraft';
 import OverlayTeamSection from '@/app/components/OverlayTeamSection';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { Hero } from '@/types';
+import Image from 'next/image';
 
 export default function OverlayPage() {
   const [heroes, setHeroes] = useState<Hero[]>([]);
