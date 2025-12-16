@@ -1,11 +1,11 @@
 // ============================================================================
-// Draft Context Provider with Pusher Integration
+// Draft Context Provider with Pusher Integration and Format Support
 // FILE: context/DraftContext.tsx
 // ============================================================================
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { DraftState } from '@/types';
+import { DraftState, DraftFormat } from '@/types';
 import { usePusher } from './PusherContext';
 
 interface DraftContextType {
@@ -13,6 +13,7 @@ interface DraftContextType {
   setState: React.Dispatch<React.SetStateAction<DraftState>>;
   updateState: (newState: DraftState | ((prev: DraftState) => DraftState)) => void;
   resetDraft: () => void;
+  setDraftFormat: (format: DraftFormat) => void;
 }
 
 const DraftContext = createContext<DraftContextType | undefined>(undefined);
@@ -23,6 +24,7 @@ const initialState: DraftState = {
   teamNames: { blue: 'Team Blue', red: 'Team Red' },
   timeLeft: 30,
   isTimerRunning: false,
+  draftFormat: 'normal', // Default format
 };
 
 export function DraftProvider({ children }: { children: ReactNode }) {
@@ -163,8 +165,20 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Function to change draft format
+  const setDraftFormat = (format: DraftFormat) => {
+    console.log('🎮 Setting draft format to:', format);
+    
+    updateState(prev => ({
+      ...prev,
+      draftFormat: format,
+      currentStep: 0, // Reset to step 0 when format changes
+      selections: {}, // Clear selections when format changes
+    }));
+  };
+
   return (
-    <DraftContext.Provider value={{ state, setState, updateState, resetDraft }}>
+    <DraftContext.Provider value={{ state, setState, updateState, resetDraft, setDraftFormat }}>
       {children}
     </DraftContext.Provider>
   );

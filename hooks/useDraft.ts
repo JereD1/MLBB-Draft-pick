@@ -1,18 +1,24 @@
 // ============================================================================
-// useDraft Hook with Pusher Integration
+// useDraft Hook with Pusher Integration and Format Support
 // FILE: hooks/useDraft.ts
 // ============================================================================
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { Hero, TeamData } from '@/types';
+import { useEffect, useCallback, useMemo } from 'react';
+import { Hero, TeamData, DraftFormat } from '@/types';
 import { DRAFT_PHASES } from '@/lib/DraftPhases';
+import { TOURNAMENT_PHASES } from '@/lib/TournamantPhases';
 import { useDraftContext } from '@/context/DraftContext';
 import { usePusher } from '@/context/PusherContext';
 
 export function useDraft(heroes: Hero[]) {
-  const { state, setState, updateState, resetDraft: contextResetDraft } = useDraftContext();
+  const { state, setState, updateState, resetDraft: contextResetDraft, setDraftFormat } = useDraftContext();
   const { isConnected, broadcast } = usePusher();
+
+  // Get the correct phases based on format
+  const currentPhases = useMemo(() => {
+    return state.draftFormat === 'tournament' ? TOURNAMENT_PHASES : DRAFT_PHASES;
+  }, [state.draftFormat]);
 
   // Timer effect - Use setState (local only) to avoid broadcasting every second
   useEffect(() => {
@@ -54,7 +60,7 @@ export function useDraft(heroes: Hero[]) {
     
     updateState(prev => {
       const newSelections = { ...prev.selections, [prev.currentStep]: heroId };
-      const newStep = prev.currentStep < DRAFT_PHASES.length - 1 
+      const newStep = prev.currentStep < currentPhases.length - 1 
         ? prev.currentStep + 1 
         : prev.currentStep;
       
@@ -65,7 +71,7 @@ export function useDraft(heroes: Hero[]) {
         timeLeft: 30,
       };
     });
-  }, [updateState]);
+  }, [updateState, currentPhases.length]);
 
   // Move to next step
   const nextStep = useCallback(() => {
@@ -73,10 +79,10 @@ export function useDraft(heroes: Hero[]) {
     
     updateState(prev => ({
       ...prev,
-      currentStep: Math.min(prev.currentStep + 1, DRAFT_PHASES.length - 1),
+      currentStep: Math.min(prev.currentStep + 1, currentPhases.length - 1),
       timeLeft: 30,
     }));
-  }, [updateState]);
+  }, [updateState, currentPhases.length]);
 
   // Move to previous step
   const previousStep = useCallback(() => {
@@ -117,6 +123,17 @@ export function useDraft(heroes: Hero[]) {
     }));
   }, [updateState]);
 
+  // Change draft format (only allowed before draft starts)
+  const changeDraftFormat = useCallback((format: DraftFormat) => {
+    // Only allow format change if draft hasn't started
+    if (state.currentStep === 0 && Object.keys(state.selections).length === 0) {
+      console.log('🎮 Changing draft format to:', format);
+      setDraftFormat(format);
+    } else {
+      console.warn('⚠️ Cannot change format after draft has started');
+    }
+  }, [state.currentStep, state.selections, setDraftFormat]);
+
   // Get hero by ID
   const getHeroById = useCallback((id: number): Hero | null => {
     return heroes.find(h => h.id === id) || null;
@@ -124,15 +141,19 @@ export function useDraft(heroes: Hero[]) {
 
   // Get team data with hero information
   const getTeamData = useCallback((team: 'blue' | 'red'): TeamData[] => {
-    return DRAFT_PHASES.map((draft, idx) => ({
+    return currentPhases.map((draft, idx) => ({
       ...draft,
       hero: state.selections[idx] ? getHeroById(state.selections[idx]) : null,
       isActive: idx === state.currentStep,
       index: idx,
     })).filter(d => d.team === team);
-  }, [state.selections, state.currentStep, getHeroById]);
+  }, [state.selections, state.currentStep, getHeroById, currentPhases]);
 
-  const currentDraft = DRAFT_PHASES[state.currentStep];
+  // Get current draft step
+  const currentDraft = currentPhases[state.currentStep];
+
+  // Check if format can be changed (only if draft hasn't started)
+  const canChangeFormat = state.currentStep === 0 && Object.keys(state.selections).length === 0;
 
   return {
     state,
@@ -146,5 +167,8 @@ export function useDraft(heroes: Hero[]) {
     getHeroById,
     getTeamData,
     isConnected, // Expose connection status
+    changeDraftFormat, // NEW: Function to change format
+    canChangeFormat, // NEW: Boolean if format can be changed
+    currentPhases, // NEW: Current phase array based on format
   };
 }

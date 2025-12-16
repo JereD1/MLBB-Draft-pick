@@ -4,13 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchHeroes } from "@/lib/api";
 import { useDraft } from "@/hooks/useDraft";
-import { DRAFT_PHASES } from "@/lib/DraftPhases";
 import HeroGrid from "@/app/components/HeroGrid";
 import CurrentTurnCard from "@/app/components/CurrentTurnCard";
 import ControlPanel from "@/app/components/ControlPanel";
 import ProgressBar from "@/app/components/ProgressBar";
 import TeamDraftList from "@/app/components/TeamDraftList";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
+import FormatSelector from "@/app/components/FormatSelector";
 import { Hero } from "@/types";
 
 export default function ControllerPage() {
@@ -57,6 +57,9 @@ export default function ControllerPage() {
     toggleTimer,
     setTeamName,
     getTeamData,
+    changeDraftFormat,
+    canChangeFormat,
+    currentPhases,
   } = useDraft(heroes);
 
   if (loading) {
@@ -89,7 +92,6 @@ export default function ControllerPage() {
     );
   }
 
-  // Fix: Filter out undefined values and ensure it's a number array
   const selectedIds = Object.values(state.selections).filter((id): id is number => id !== undefined);
   
   const blueTeam = getTeamData("blue");
@@ -105,7 +107,7 @@ export default function ControllerPage() {
             </h1>
             <div className="flex items-center gap-4 mt-2">
               <p className="text-gray-400 text-sm">
-                MPL Format - Phase {currentDraft.phase} - {heroes.length} Heroes Loaded
+                {state.draftFormat === 'tournament' ? 'Tournament' : 'Normal'} Format - Phase {currentDraft.phase} - {heroes.length} Heroes Loaded
               </p>
               <ConnectionStatus />
             </div>
@@ -138,6 +140,13 @@ export default function ControllerPage() {
 
         <div className="grid grid-cols-3 gap-6">
           <div className="space-y-4">
+            {/* Format Selector */}
+            <FormatSelector
+              currentFormat={state.draftFormat}
+              onFormatChange={changeDraftFormat}
+              disabled={!canChangeFormat}
+            />
+
             <CurrentTurnCard
               currentDraft={currentDraft}
               teamName={
@@ -152,7 +161,7 @@ export default function ControllerPage() {
 
             <ControlPanel
               currentStep={state.currentStep}
-              totalSteps={DRAFT_PHASES.length}
+              totalSteps={currentPhases.length}
               onPrevious={previousStep}
               onNext={nextStep}
               onReset={resetDraft}
@@ -160,7 +169,7 @@ export default function ControllerPage() {
 
             <ProgressBar
               currentStep={state.currentStep}
-              totalSteps={DRAFT_PHASES.length}
+              totalSteps={currentPhases.length}
             />
           </div>
 
