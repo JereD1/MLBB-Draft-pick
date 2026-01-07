@@ -97,13 +97,13 @@ export default function TournamentOverlay() {
             </div>
 
             {/* Blue Bans */}
-            <div className={`flex gap-1 items-center px-2 bg-blue-800/50 ${
+            <div className={`flex gap-1 items-center px-2 bg-blue-800 ${
               isTournamentMode ? 'min-w-[260px]' : 'min-w-[160px]'
             }`}>
               {blueBans.map((draft) => (
                 <div
                   key={draft.index}
-                  className="w-20 h-18 bg-black/60 relative overflow-hidden border border-blue-500"
+                  className="w-20 h-18 relative overflow-hidden border border-blue-500"
                 >
                   {draft.hero ? (
                     <>
@@ -113,7 +113,7 @@ export default function TournamentOverlay() {
                           height={100}
                           src={draft.hero.image}
                           alt={draft.hero.name}
-                          className="w-full h-full object-cover opacity-50 grayscale"
+                          className="w-full h-full object-cover grayscale-75"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "https://via.placeholder.com/48?text=X";
@@ -122,11 +122,11 @@ export default function TournamentOverlay() {
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <svg
-                          className="w-5 h-5 text-red-600"
+                          className="w-7 h-7 text-red-600"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2.5"
+                          strokeWidth="3"
                         >
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
@@ -267,7 +267,7 @@ export default function TournamentOverlay() {
               {redBans.map((draft) => (
                 <div
                   key={draft.index}
-                  className="w-20 h-18 bg-black/60 relative overflow-hidden border border-red-500"
+                  className="w-20 h-18 relative overflow-hidden border border-red-500"
                 >
                   {draft.hero ? (
                     <>
@@ -277,7 +277,7 @@ export default function TournamentOverlay() {
                           height={100}
                           src={draft.hero.image}
                           alt={draft.hero.name}
-                          className="w-full h-full object-cover opacity-50 grayscale"
+                          className="w-full h-full object-cover grayscale-75"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "https://via.placeholder.com/48?text=X";
@@ -286,11 +286,11 @@ export default function TournamentOverlay() {
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <svg
-                          className="w-5 h-5 text-red-600"
+                          className="w-7 h-7 text-red-600"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2.5"
+                          strokeWidth="3"
                         >
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
