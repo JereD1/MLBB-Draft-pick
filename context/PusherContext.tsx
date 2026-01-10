@@ -25,9 +25,6 @@ export function PusherProvider({ children }: { children: ReactNode }) {
   const [channel, setChannel] = useState<any>(null);
 
   useEffect(() => {
-    console.log('🔌 Initializing Pusher...');
-    console.log('📍 Key:', process.env.NEXT_PUBLIC_PUSHER_KEY);
-    console.log('📍 Cluster:', process.env.NEXT_PUBLIC_PUSHER_CLUSTER);
 
     // Enable Pusher logging for debugging
     Pusher.logToConsole = process.env.NODE_ENV === 'development';
